@@ -58,15 +58,14 @@ jobs:
           COMMENT=$(sed '/^```/d' review_result.txt | jq -c .)
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
-      - name: Delete existing PR review comments
+      - name: Delete existing PR review comments (alternative)
         id: delete_comments
         run: |
-          COMMENTS=$(gh pr view ${{ github.event.pull_request.number }} --json reviews -q ".reviews | map(select(.user.login == \"github-actions[bot]\") | .id)")
-          if [ -n "$COMMENTS" ]; then
-            for REVIEW_ID in $COMMENTS; do
-              gh pr comment ${{ github.event.pull_request.number }} --delete --comment-id $REVIEW_ID
-            done
-          fi
+          curl -X GET -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" \
+            | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id' \
+            | xargs -I {} curl -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/{}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
