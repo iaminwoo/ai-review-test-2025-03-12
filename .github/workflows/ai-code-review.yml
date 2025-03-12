@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  pr-review:
+  code-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,35 +24,44 @@ jobs:
         run: |
           npm install @google/generative-ai
 
-      - name: Get commit message
-        run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')" >> $GITHUB_ENV
-
       - name: Get git diff for PR
-        run: git diff --unified=0 origin/${{ github.event.pull_request.base.ref }} > "diff.txt"
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}"
+          git fetch origin "${{ github.event.pull_request.head.ref }}"
+          git diff --unified=0 "origin/${{ github.event.pull_request.base.ref }}" > "diff.txt"
+          echo "EVENT_TYPE=pull_request" >> $GITHUB_ENV
 
-      - name: Run Gemini-1.5-flash Review
+      - name: Run Gemini-1.5-flash
         id: gemini_review
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("fs");
-            const diff_output = fs.readFileSync("diff.txt", "utf8");
-            const commit_message = process.env.COMMIT_MESSAGE;
+            const diff_output = fs.readFileSync("diff.txt",'utf8');
 
             const { GoogleGenerativeAI } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
-            const prompt = `Explain in Korean. You are reviewing a pull request. The commit message is "${commit_message}". Provide comments in JSON format considering the context of the commit message: [{"path":"{ filepath }", "line": { line }, "text": { review comment }, "side": "RIGHT"}].\n<git diff>${diff_output}</git diff>`;
+            let prompt = `Explain in korean. You are a senior software engineer and need to perform a code review based on the results of a given git diff. Review the changed code from different perspectives and let us know if there are any changes that need to be made. If you see any code that needs to be fixed in the result of the git diff, you need to calculate the exact line number by referring to the "@@ -0,0 +0,0 @@" part. The output format is \[{"path":"{ filepath }", "line": { line }, "text": { review comment }, "side": "RIGHT"}\] format must be respected.\n<git diff>${diff_output}</git diff>`;
 
             const result = await model.generateContent(prompt);
-            fs.writeFileSync('review_result.txt', result.response.text());
+            const response = await result.response;
+            const text = response.text();
 
-      - name: Add PR review comments
+            fs.writeFileSync('review_result.txt', text);
+            console.log('Review results saved!');
+
+      - name: Format and add PR review comments
+        id: store
+        run: |
+          COMMENT=$(sed '/^```/d' review_result.txt | jq -c .)
+          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
+
+      - name: Add Pull Request Review Comment
         uses: nbaztec/add-pr-review-comment@v1.0.7
         with:
-          comments: ${{ steps.gemini_review.outputs.comment }}
+          comments: ${{ steps.store.outputs.comment }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Display review results in workflow log
-        run: cat review_result.txt
+          repo-token-user-login: 'github-actions[bot]'
+          allow-repeats: false
