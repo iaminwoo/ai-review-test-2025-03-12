@@ -58,6 +58,16 @@ jobs:
           COMMENT=$(sed '/^```/d' review_result.txt | jq -c .)
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
+      - name: Delete existing PR review comments
+        id: delete_comments
+        run: |
+          COMMENTS=$(gh pr view ${{ github.event.pull_request.number }} --json reviews -q ".reviews | map(select(.user.login == \"github-actions[bot]\") | .id)")
+          if [ -n "$COMMENTS" ]; then
+            for REVIEW_ID in $COMMENTS; do
+              gh pr review ${{ github.event.pull_request.number }} --delete --review-id $REVIEW_ID
+            done
+          fi
+
       - name: Add Pull Request Review Comment
         uses: nbaztec/add-pr-review-comment@v1.0.7
         with:
