@@ -1,90 +1,41 @@
-name: Gemini Code Review
+name: Gemini AI Code Reviewer
 
 on:
-  pull_request:
-    branches: [ main ]
-    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions: write-all
 
 jobs:
-  code-review:
+  gemini-code-review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/gemini-review')
     steps:
-      - name: Checkout repository
+      - name: PR Info
+        run: |
+          echo "Comment: ${{ github.event.comment.body }}"
+          echo "Issue Number: ${{ github.event.issue.number }}"
+          echo "Repository: ${{ github.repository }}"
+
+      - name: Checkout Repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
-
-      - name: Install GoogleGenerativeAI
+      - name: Get PR Details
+        id: pr
         run: |
-          npm install @google/generative-ai
-
-      - name: Get git diff for PR
-        run: |
-          git fetch origin "${{ github.event.pull_request.base.ref }}"
-          git fetch origin "${{ github.event.pull_request.head.ref }}"
-          git diff --unified=0 "origin/${{ github.event.pull_request.base.ref }}" > "diff.txt"
-          echo "EVENT_TYPE=pull_request" >> $GITHUB_ENV
-
-      - name: Run Gemini-1.5-flash
-        id: gemini_review
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require("fs");
-            const diff_output = fs.readFileSync("diff.txt",'utf8');
-
-            const { GoogleGenerativeAI } = require("@google/generative-ai");
-            const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
-
-            let prompt = `Explain in korean. You are a senior software engineer and need to perform a code review based on the results of a given git diff. Review the changed code from different perspectives and let us know if there are any changes that need to be made. If you see any code that needs to be fixed in the result of the git diff, you need to calculate the exact line number by referring to the "@@ -0,0 +0,0 @@" part. The output format is \[{"path":"{ filepath }", "line": { line }, "text": { review comment }, "side": "RIGHT"}\] format must be respected.\n<git diff>${diff_output}</git diff>`;
-
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
-
-            fs.writeFileSync('review_result.txt', text);
-            console.log('Review results saved!');
-
-      - name: Format and add PR review comments
-        id: store
-        run: |
-          COMMENT=$(sed '/^```/d' review_result.txt | jq -c .)
-          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
-
-      - name: Delete existing PR review comments (alternative)
-        id: delete_comments
-        run: |
-          # Set the GitHub Token for API requests
-          GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          
-          # Get the review IDs from the current PR
-          REVIEW_IDS=$(curl -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" \
-            | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id')
-
-          # Check if there are reviews to delete
-          if [ -n "$REVIEW_IDS" ]; then
-            for REVIEW_ID in $REVIEW_IDS; do
-              curl -X DELETE -H "Authorization: Bearer $GH_TOKEN" \
-                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/${REVIEW_ID}"
-            done
-          else
-            echo "No reviews to delete."
-          fi
+          PR_JSON=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.issue.number }})
+          echo "head_sha=$(echo $PR_JSON | jq -r .head.sha)" >> $GITHUB_OUTPUT
+          echo "base_sha=$(echo $PR_JSON | jq -r .base.sha)" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add Pull Request Review Comment
-        uses: nbaztec/add-pr-review-comment@v1.0.7
+      - uses: truongnh1992/gemini-ai-code-reviewer@main
         with:
-          comments: ${{ steps.store.outputs.comment }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          repo-token-user-login: 'github-actions[bot]'
-          allow-repeats: false
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-1.5-pro-002 # Optional, default is `gemini-1.5-flash-002`
+          EXCLUDE: "*.md,*.txt,package-lock.json,*.yml,*.yaml"
