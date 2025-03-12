@@ -17,6 +17,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node
+        uses: actions/setup-node@v3
+
+      - name: Install GoogleGenerativeAI
+        run: |
+          npm install @google/generative-ai
+
       - name: Get commit message
         run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')" >> $GITHUB_ENV
 
