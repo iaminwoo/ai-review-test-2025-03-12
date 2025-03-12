@@ -67,6 +67,8 @@ jobs:
               gh pr review ${{ github.event.pull_request.number }} --delete --review-id $REVIEW_ID
             done
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add Pull Request Review Comment
         uses: nbaztec/add-pr-review-comment@v1.0.7
