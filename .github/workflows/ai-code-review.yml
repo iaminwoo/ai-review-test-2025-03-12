@@ -61,11 +61,23 @@ jobs:
       - name: Delete existing PR review comments (alternative)
         id: delete_comments
         run: |
-          curl -X GET -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          # Set the GitHub Token for API requests
+          GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          
+          # Get the review IDs from the current PR
+          REVIEW_IDS=$(curl -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" \
-            | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id' \
-            | xargs -I {} curl -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/{}"
+            | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id')
+
+          # Check if there are reviews to delete
+          if [ -n "$REVIEW_IDS" ]; then
+            for REVIEW_ID in $REVIEW_IDS; do
+              curl -X DELETE -H "Authorization: Bearer $GH_TOKEN" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/${REVIEW_ID}"
+            done
+          else
+            echo "No reviews to delete."
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
