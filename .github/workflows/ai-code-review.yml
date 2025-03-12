@@ -64,7 +64,7 @@ jobs:
           COMMENTS=$(gh pr view ${{ github.event.pull_request.number }} --json reviews -q ".reviews | map(select(.user.login == \"github-actions[bot]\") | .id)")
           if [ -n "$COMMENTS" ]; then
             for REVIEW_ID in $COMMENTS; do
-              gh pr review ${{ github.event.pull_request.number }} --delete --review-id $REVIEW_ID
+              gh pr comment ${{ github.event.pull_request.number }} --delete --comment-id $REVIEW_ID
             done
           fi
         env:
