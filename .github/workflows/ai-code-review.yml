@@ -45,7 +45,6 @@ jobs:
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
             
-            // 커밋 메시지를 참고하여 코드 리뷰할 수 있도록 프롬프트 수정
             const commitMessage = '${{ github.event.pull_request.title }}';
             let prompt = `Explain in korean. You are a senior software engineer and need to perform a code review based on the results of a given git diff. The commit message is: "${commitMessage}". Review the changed code from different perspectives such as readability, performance, security, and logic. If you see any issues with the code, include the exact line numbers as per the git diff format "@@ -0,0 +0,0 @@". The output format should be: [{"path":"{filepath}", "line":{line}, "text":"{review comment}", "side":"RIGHT"}]\n<git diff>${diff_output}</git diff>`;
             
@@ -59,11 +58,12 @@ jobs:
       # 기존 리뷰 삭제 (봇이 쓴 리뷰만 삭제)
       - name: Delete existing PR review comments by the bot
         run: |
-          # 기존 PR 리뷰 코멘트 삭제 (봇이 작성한 리뷰만 필터링하여 삭제)
           PR_COMMENTS=$(gh pr view ${{ github.event.pull_request.number }} --json comments -q ".comments[] | select(.user.login == \"github-actions[bot]\") | .id")
           for COMMENT_ID in $PR_COMMENTS; do
             gh pr comment ${{ github.event.pull_request.number }} --delete $COMMENT_ID
           done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # 라인별 리뷰 코멘트 추가
       - name: Format and add PR review comments
