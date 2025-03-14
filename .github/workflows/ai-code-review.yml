@@ -30,7 +30,7 @@ jobs:
           git diff --unified=0 "origin/${{ github.event.pull_request.base.ref }}" > diff.txt
 
       # Gemini API를 호출하여 PR 제목, 설명, diff를 포함한 프롬프트로 요약 및 설명 생성
-            - name: Run Gemini-1.5-flash
+      - name: Run Gemini-1.5-flash
         id: gemini_review
         uses: actions/github-script@v7
         with:
