@@ -16,21 +16,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node
+      - name: Set up Node.js
         uses: actions/setup-node@v3
 
-      - name: Install Dependencies
+      - name: Install Gemini AI Dependencies
         run: npm install @google/generative-ai
 
       # PR 이벤트의 변경사항(diff) 추출
-      - name: Get git diff for PR
+      - name: Fetch and Generate Git Diff for PR
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}"
           git fetch origin "${{ github.event.pull_request.head.ref }}"
           git diff --unified=0 "origin/${{ github.event.pull_request.base.ref }}" > diff.txt
 
       # Gemini API를 호출하여 PR 제목, 설명, diff를 포함한 프롬프트로 요약 및 설명 생성
-      - name: Run Gemini-1.5-flash
+      - name: Call Gemini API to Generate PR Summary
         id: gemini_review
         uses: actions/github-script@v7
         with:
@@ -81,8 +81,21 @@ jobs:
               console.error("❌ Gemini API 요청 중 오류 발생:", error);
               process.exit(1);
             }
+
+      - name: Validate and Process Review Result File
+        run: |
+          if [ -f review_result.txt ]; then
+            echo "review_result.txt 파일이 정상적으로 생성되었습니다."
             
-      - name: Format and add PR review comments
+            # 마크다운 문법 제거 후 파일 내용 확인
+            cleaned_content=$(cat review_result.txt | sed 's/^```json//g' | sed 's/```//g')
+            echo "$cleaned_content" > cleaned_review_result.txt  # 마크다운 문법이 제거된 파일로 저장
+          else
+            echo "❌ review_result.txt 파일이 존재하지 않습니다."
+            exit 1  # 파일이 없으면 에러 발생
+          fi
+            
+      - name: Format PR Review Summary for Comment
         id: store
         run: |
           COMMENT=$(cat cleaned_review_result.txt | jq -c 'if type == "array" then . else [.] end')
@@ -97,7 +110,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
 
-      - name: Add Pull Request Summary Comment
+      - name: Post PR Summary Comment
         uses: mshick/add-pr-comment@v2
         with:
           message: ${{ steps.store.outputs.comment }}  # 이 값을 PR 댓글로 추가
