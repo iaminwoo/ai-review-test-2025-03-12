@@ -91,17 +91,18 @@ jobs:
             exit 1  # 파일이 없으면 에러 발생
           fi
       
-      - name: Process cleaned review_result.txt
+      - name: Format and add PR review comments
+        id: store
         run: |
-          # 마크다운 문법이 제거된 파일로부터 jq 처리
           COMMENT=$(cat cleaned_review_result.txt | jq -c 'if type == "array" then . else [.] end')
-          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
-
+          echo "comment=$COMMENT" >> $GITHUB_ENV  # set-output 대신 환경 파일에 저장
+      
       - name: Add Pull Request Summary Comment
         if: github.event_name == 'pull_request'
         uses: nbaztec/add-pr-review-comment@v1.0.7
         with:
-          comments: ${{ steps.store.outputs.comment }}
+          comments: ${{ env.comment }}  # 환경 파일에서 가져온 comment 사용
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           repo-token-user-login: 'github-actions[bot]'
           allow-repeats: false
+
