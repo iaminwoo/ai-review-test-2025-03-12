@@ -100,7 +100,6 @@ jobs:
           echo "comment=$COMMENT_STRING" >> $GITHUB_ENV  # 문자열로 저장
       
       - name: Add Pull Request Summary Comment
-        if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v2
         with:
           message: ${{ env.comment }}  # 환경 파일에서 가져온 comment 사용
