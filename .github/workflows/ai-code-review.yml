@@ -30,28 +30,36 @@ jobs:
           git diff --unified=0 "origin/${{ github.event.pull_request.base.ref }}" > diff.txt
 
       # Gemini API를 호출하여 PR 제목, 설명, diff를 포함한 프롬프트로 요약 및 설명 생성
-      - name: Run Gemini-1.5-flash for PR Summary
-        id: gemini_summary
+            - name: Run Gemini-1.5-flash
+        id: gemini_review
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            // GitHub 이벤트에서 PR 제목과 설명을 가져옵니다.
-            const prTitle = context.payload.pull_request.title;
-            const prBody = context.payload.pull_request.body;
-            // diff 파일 읽기
-            const diffOutput = fs.readFileSync('diff.txt', 'utf8');
-            // Gemini API 호출
+            const fs = require("fs");
+            const diff_output = fs.readFileSync("diff.txt",'utf8');
+            
             const { GoogleGenerativeAI } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
-            // 프롬프트 구성: PR 제목, 설명, 그리고 코드 변경사항 포함
-            const prompt = `PR 제목: ${prTitle}\nPR 설명: ${prBody}\n\n다음 git diff를 참고하여 변경사항에 대한 요약과 필요한 설명을 한국어로 작성해줘:\n<git diff>${diffOutput}</git diff>`;
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = await response.text();
-            fs.writeFileSync('pr_summary.txt', text);
-            console.log('PR summary saved!');
+            
+            let prompt = `Explain in korean. Analyze the code changes and provide feedback.\n<git diff>${diff_output}</git diff>`;
+
+            try {
+              const result = await model.generateContent(prompt);
+              const response = await result.response;
+              const text = response.text();
+
+              if (!text || text.trim().length === 0) {
+                console.log("❌ Gemini API 응답이 비어 있습니다.");
+                process.exit(1);
+              }
+
+              fs.writeFileSync('review_result.txt', text);
+              console.log("✅ Gemini API 응답을 review_result.txt 파일에 저장했습니다.");
+            } catch (error) {
+              console.error("❌ Gemini API 요청 중 오류 발생:", error);
+              process.exit(1);
+            }
 
       - name: Check if review_result.txt exists
         run: |
