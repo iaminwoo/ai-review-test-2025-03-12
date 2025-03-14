@@ -94,7 +94,7 @@ jobs:
       - name: Format and add PR review comments
         id: store
         run: |
-          COMMENT=$(jq -c 'if type == "array" then . else [.] end' review_result.txt)
+          COMMENT=$(jq -c 'if type == "array" then . else [.] end' < review_result.txt)
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Add Pull Request Summary Comment
