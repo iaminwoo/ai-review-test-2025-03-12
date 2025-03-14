@@ -42,7 +42,25 @@ jobs:
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
             
-            let prompt = `Explain in korean. Analyze the code changes and provide feedback.\n<git diff>${diff_output}</git diff>`;
+            let prompt = `
+              Analyze the following git diff and provide feedback in JSON format.
+              Explain the changes and improvements in Korean. but make it short.
+              
+              The response must be a valid JSON array. 
+              Each feedback should follow this format:
+              [
+                {
+                  "file": "파일 이름",
+                  "comment": "코드 변경에 대한 피드백"
+                }
+              ]
+              
+              <git diff>
+              ${diff_output}
+              </git diff>
+              
+              Make sure the response is a valid JSON array with double quotes and proper formatting.
+              `;
 
             try {
               const result = await model.generateContent(prompt);
