@@ -78,7 +78,7 @@ jobs:
               console.error("❌ Gemini API 요청 중 오류 발생:", error);
               process.exit(1);
             }
-
+            
       - name: Check if review_result.txt exists
         run: |
           if [ -f review_result.txt ]; then
@@ -89,11 +89,11 @@ jobs:
             exit 1  # 파일이 없으면 에러 발생
           fi
 
-      # 생성된 요약 내용을 PR 댓글로 추가하기 위해 JSON 문자열로 포맷팅
       - name: Format and add PR review comments
         id: store
         run: |
-          COMMENT=$(jq -c 'if type == "array" then . else [.] end' < review_result.txt)
+          # JSON을 올바르게 처리하기 위해 파일 내용의 공백을 제거
+          COMMENT=$(cat review_result.txt | jq -c 'if type == "array" then . else [.] end')
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Add Pull Request Summary Comment
