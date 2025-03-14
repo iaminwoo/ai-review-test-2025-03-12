@@ -19,6 +19,8 @@ jobs:
         run: |
           git fetch origin main
           echo "::set-output name=diff::$(git diff origin/main)"
+          echo "Git Diff Output:"
+          git diff origin/main
 
       - name: Code Review with Gemini
         id: gemini
@@ -26,18 +28,20 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }} # Google Cloud 서비스 계정 키
       - run: |
-          response=$(curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent" \
-            -d '{
-              "contents": [{
-                "parts": [{
-                  "text": "다음 코드 변경 사항에 대한 코드 리뷰를 제공해주세요. 반드시 수정이 필요한 부분 최대 5개만 알려주세요:\n\n${{ steps.diff.outputs.diff }}"
+            response=$(curl -s -X POST \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent" \
+              -d '{
+                "contents": [{
+                  "parts": [{
+                    "text": "다음 코드 변경 사항에 대한 코드 리뷰를 제공해주세요. 반드시 수정이 필요한 부분 최대 5개만 알려주세요:\n\n${{ steps.diff.outputs.diff }}"
+                  }]
                 }]
-              }]
-            }')
-          echo "::set-output name=result::$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')"
+              }')
+            echo "::set-output name=result::$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')"
+            echo "Gemini API Response:"
+            echo "$response"
       - name: Post Review Comment
         uses: peter-evans/create-or-update-comment@v3
         with:
