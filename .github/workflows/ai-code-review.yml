@@ -89,6 +89,9 @@ jobs:
             exit 1  # 파일이 없으면 에러 발생
           fi
 
+      - name: Debug review_result.txt
+        run: |
+          cat -A review_result.txt
 
       # 생성된 요약 내용을 PR 댓글로 추가하기 위해 JSON 문자열로 포맷팅
       - name: Format and add PR review comments
