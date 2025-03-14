@@ -83,19 +83,18 @@ jobs:
         run: |
           if [ -f review_result.txt ]; then
             echo "review_result.txt 파일이 정상적으로 생성되었습니다."
-            # 마크다운 문법 제거 후 파일 내용을 확인
+            # 마크다운 문법 제거 후 파일 내용 확인
             cleaned_content=$(cat review_result.txt | sed 's/^```json//g' | sed 's/```//g')
-            echo "$cleaned_content"  # 정리된 파일 내용 출력
+            echo "$cleaned_content" > cleaned_review_result.txt  # 마크다운 문법이 제거된 파일로 저장
           else
             echo "❌ review_result.txt 파일이 존재하지 않습니다."
             exit 1  # 파일이 없으면 에러 발생
           fi
-
-      - name: Format and add PR review comments
-        id: store
+      
+      - name: Process cleaned review_result.txt
         run: |
-          # JSON을 올바르게 처리하기 위해 파일 내용의 공백을 제거
-          COMMENT=$(cat review_result.txt | jq -c 'if type == "array" then . else [.] end')
+          # 마크다운 문법이 제거된 파일로부터 jq 처리
+          COMMENT=$(cat cleaned_review_result.txt | jq -c 'if type == "array" then . else [.] end')
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Add Pull Request Summary Comment
