@@ -53,6 +53,17 @@ jobs:
             fs.writeFileSync('pr_summary.txt', text);
             console.log('PR summary saved!');
 
+      - name: Check if review_result.txt exists
+        run: |
+          if [ -f review_result.txt ]; then
+            echo "review_result.txt 파일이 정상적으로 생성되었습니다."
+            cat review_result.txt  # 파일 내용 출력
+          else
+            echo "❌ review_result.txt 파일이 존재하지 않습니다."
+            exit 1  # 파일이 없으면 에러 발생
+          fi
+
+
       # 생성된 요약 내용을 PR 댓글로 추가하기 위해 JSON 문자열로 포맷팅
       - name: Format and add PR review comments
         id: store
