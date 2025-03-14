@@ -101,6 +101,7 @@ jobs:
           
           # 줄바꿈을 환경 변수에 넣는 방법
           echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "# PR 요약\n" >> $GITHUB_OUTPUT
           echo -e "$COMMENT_STRING" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
@@ -110,4 +111,3 @@ jobs:
         with:
           message: ${{ steps.store.outputs.comment }}  # 이 값을 PR 댓글로 추가
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          repo-token-user-login: 'github-actions[bot]'
