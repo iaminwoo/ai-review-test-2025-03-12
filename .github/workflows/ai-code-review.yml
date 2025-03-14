@@ -44,6 +44,7 @@ jobs:
 
             let prompt = `
               다음 Git diff를 분석하고 변경 사항에 대한 피드백을 작성하세요.
+              하지만 모든 파일 대상이 아니라 개발자가 직접 작성하는 부분만 다뤄주세요.
               각 변경 사항에 대해 파일명, 수정 내용, 역할을 포함하여 아래와 같은 형식으로 요약해 주세요:
               
               형식: 
@@ -99,7 +100,7 @@ jobs:
           COMMENT=$(cat cleaned_review_result.txt | jq -c 'if type == "array" then . else [.] end')
           
           # JSON 배열을 문자열로 변환
-          COMMENT_STRING=$(echo "$COMMENT" | jq -r '.[] | "### < \(.file) >\n  - **역할:**\n \(.role)\n  - **수정 내용:**\n \(.change)\n\n"')
+          COMMENT_STRING=$(echo "$COMMENT" | jq -r '.[] | "### < \(.file) >\n  - **역할:**\n \(.role)\n\n  - **수정 내용:**\n \(.change)\n\n"')
           
           # 줄바꿈을 환경 변수에 넣는 방법
           echo "comment<<EOF" >> $GITHUB_OUTPUT
