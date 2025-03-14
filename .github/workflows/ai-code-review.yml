@@ -41,7 +41,7 @@ jobs:
       - name: Post Review Comment
         uses: peter-evans/create-or-update-comment@v3
         with:
-          issue-id: ${{ github.event.pull_request.number }}
+          issue-number: ${{ github.event.pull_request.number }} # issue-id를 issue-number로 변경
           body: |
             ## 코드 리뷰 결과
             ${{ steps.gemini.outputs.result }}
