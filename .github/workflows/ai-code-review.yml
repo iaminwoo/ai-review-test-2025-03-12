@@ -55,7 +55,6 @@ jobs:
 
       # 생성된 요약 내용을 PR 댓글로 추가하기 위해 JSON 문자열로 포맷팅
       - name: Format and add PR review comments
-        if: env.EVENT_TYPE == 'pull_request'
         id: store
         run: |
           COMMENT=$(jq -c 'if type == "array" then . else [.] end' review_result.txt)
