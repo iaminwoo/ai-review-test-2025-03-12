@@ -95,16 +95,18 @@ jobs:
         id: store
         run: |
           COMMENT=$(cat cleaned_review_result.txt | jq -c 'if type == "array" then . else [.] end')
-          COMMENT_STRING=$(echo "$COMMENT" | jq -r '.[] | 
-            "- 파일명: \(.file)\n  수정 내용: \(.change)\n  역할: \(.role)\n"')
-          echo "comment=$COMMENT_STRING" >> $GITHUB_ENV  # 예쁘게 포맷된 내용 저장
+          COMMENT_STRING=$(echo "$COMMENT" | jq -r '.[] | "- 파일명: \(.file)\n  수정 내용: \(.change)\n  역할: \(.role)\n"')
+
+          # 환경 변수 대신 GitHub Output에 저장
+          echo "comment=$COMMENT_STRING" >> $GITHUB_OUTPUT  # 여기서는 GITHUB_OUTPUT 사용
 
       - name: Add Pull Request Summary Comment
         uses: mshick/add-pr-comment@v2
         with:
           message: |
             **PR 변경 사항 요약:**
-            ${{ env.comment }}  # 예쁘게 포맷된 comment 사용
+            ${{ steps.store.outputs.comment }}  # GITHUB_OUTPUT에서 가져온 comment 사용
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           repo-token-user-login: 'github-actions[bot]'
+
 
