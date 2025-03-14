@@ -83,7 +83,9 @@ jobs:
         run: |
           if [ -f review_result.txt ]; then
             echo "review_result.txt 파일이 정상적으로 생성되었습니다."
-            cat review_result.txt  # 파일 내용 출력
+            # 마크다운 문법 제거 후 파일 내용을 확인
+            cleaned_content=$(cat review_result.txt | sed 's/^```json//g' | sed 's/```//g')
+            echo "$cleaned_content"  # 정리된 파일 내용 출력
           else
             echo "❌ review_result.txt 파일이 존재하지 않습니다."
             exit 1  # 파일이 없으면 에러 발생
