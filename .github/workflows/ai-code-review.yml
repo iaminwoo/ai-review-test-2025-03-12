@@ -82,18 +82,6 @@ jobs:
               process.exit(1);
             }
             
-      - name: Check if review_result.txt exists
-        run: |
-          if [ -f review_result.txt ]; then
-            echo "review_result.txt 파일이 정상적으로 생성되었습니다."
-            # 마크다운 문법 제거 후 파일 내용 확인
-            cleaned_content=$(cat review_result.txt | sed 's/^```json//g' | sed 's/```//g')
-            echo "$cleaned_content" > cleaned_review_result.txt  # 마크다운 문법이 제거된 파일로 저장
-          else
-            echo "❌ review_result.txt 파일이 존재하지 않습니다."
-            exit 1  # 파일이 없으면 에러 발생
-          fi
-      
       - name: Format and add PR review comments
         id: store
         run: |
@@ -102,7 +90,7 @@ jobs:
           # JSON 배열을 문자열로 변환
           COMMENT_STRING=$(echo "$COMMENT" | jq -r '.[] | "### < \(.file) >\n  - **역할:**\n \(.role)\n\n  - **수정 내용:**\n \(.change)\n\n"')
           
-          # 줄바꿈을 환경 변수에 넣는 방법
+          # 줄바꿈 처리
           echo "comment<<EOF" >> $GITHUB_OUTPUT
           echo "# PR 요약" >> $GITHUB_OUTPUT
           echo -e "$COMMENT_STRING" >> $GITHUB_OUTPUT
