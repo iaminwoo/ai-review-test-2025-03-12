@@ -54,11 +54,11 @@ jobs:
             console.log('PR summary saved!');
 
       # 생성된 요약 내용을 PR 댓글로 추가하기 위해 JSON 문자열로 포맷팅
-      - name: Format and add PR summary comment
-        if: github.event_name == 'pull_request'
+      - name: Format and add PR review comments
+        if: env.EVENT_TYPE == 'pull_request'
         id: store
         run: |
-          COMMENT=$(sed '/^```/d' pr_summary.txt | jq -R -s .)
+          COMMENT=$(jq -c 'if type == "array" then . else [.] end' review_result.txt)
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Add Pull Request Summary Comment
